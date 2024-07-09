@@ -26,7 +26,7 @@ export const Navbar = () => {
   return (
     <div className="bg-yellow-500 flex items-center justify-between px-6 py-2 drop-shadow">
       {/* This is a heading element with a class name of "text-xl font-medium py-2". It displays the text "Notes". */}
-      <h2 className="text-xl font-medium py-2">Notes</h2>
+      <h2 className="text-xl text-white font-medium py-2">Notes</h2>
       {/* This is an instance of the SearchBar component. It receives the searchQuery state variable, the setSearchQuery function to update it and the handleSearch and onClearSearch functions as props. */}
       <SearchBar
         value={searchQuery}
