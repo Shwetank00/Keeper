@@ -8,7 +8,7 @@ export const SignUp = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const handleSignUp = async (e) => {
     e.preventDefault();
 
@@ -29,7 +29,7 @@ export const SignUp = () => {
       return;
     }
     setError("");
-    //SignUp API call
+    //!SignUp API call
   };
   return (
     <>
