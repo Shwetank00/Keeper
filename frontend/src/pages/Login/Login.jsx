@@ -21,21 +21,30 @@ export const Login = () => {
   // Function to handle the login form submission.
   // It takes an event object as a parameter.
   // The function prevents the default form submission behavior.
+  // This function is called when the login form is submitted.
+  // It takes an event object as a parameter and prevents the default form submission behavior.
   const handleLogin = async (e) => {
+    // Prevent the default form submission behavior.
     e.preventDefault();
 
+    // Check if the email is valid.
     if (!validateEmail(email)) {
+      // If the email is not valid, set an error message and return early.
       setError("Please enter a valid email address.");
       return;
     }
+
+    // Check if the password is not empty.
     if (!password) {
+      // If the password is empty, set an error message and return early.
       setError("Please enter the password.");
       return;
     }
 
+    // Clear any error message.
     setError("");
 
-    //Login API call
+    //! Login API call goes here.
   };
 
   return (
@@ -53,6 +62,8 @@ export const Login = () => {
               placeholder="Email"
               className="input-box"
               value={email}
+              // This event handler is called whenever the user types something in the email input field.
+              // The setEmail function is called with the value of the input field as an argument, which updates the state variable email.
               onChange={(e) => setEmail(e.target.value)}
             />
 
