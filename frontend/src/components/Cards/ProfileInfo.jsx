@@ -1,19 +1,18 @@
-import React from "react";
+import PropTypes from "prop-types";
 import { getInitials } from "../../utils/helper";
 
-// Define a functional component named ProfileInfo
-export const ProfileInfo = ({ onLogout }) => {
-  // Render a div with two child elements
+// ProfileInfo component displays user initials, name, and logout option
+export const ProfileInfo = ({ username, onLogout }) => {
   return (
     <div className="flex items-center gap-3">
-      {/* Render a div that displays the initials of the user's name */}
+      {/* User initials inside a rounded avatar */}
       <div className="w-12 h-12 flex items-center justify-center rounded-full text-slate-950 font-medium bg-slate-100">
-        {getInitials("Shwetank jain")}
+        {getInitials(username)}
       </div>
-      {/* Render a div that displays the user's name and a logout button */}
+
+      {/* User name and logout button */}
       <div>
-        <p className="text-sm text-slate-950 font-medium">Shwetank00</p>
-        {/* Render a button that calls the onLogout function when clicked */}
+        <p className="text-sm text-slate-950 font-medium">{username}</p>
         <button className="text-sm text-slate-950 underline" onClick={onLogout}>
           Logout
         </button>
@@ -22,3 +21,13 @@ export const ProfileInfo = ({ onLogout }) => {
   );
 };
 
+// Define PropTypes for type checking
+ProfileInfo.propTypes = {
+  username: PropTypes.string.isRequired, // Username must be a string
+  onLogout: PropTypes.func.isRequired, // onLogout must be a function
+};
+
+// Default props (optional)
+ProfileInfo.defaultProps = {
+  username: "User",
+};

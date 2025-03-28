@@ -1,17 +1,6 @@
-import React from "react";
-import { MdOutlinePushPin } from "react-icons/md";
-import { MdCreate, MdDelete } from "react-icons/md";
+import PropTypes from "prop-types";
+import { MdOutlinePushPin, MdCreate, MdDelete } from "react-icons/md";
 
-// NoteCard component displays a single note card with the title, date, content, tags, and options to edit and delete the note.
-// It receives the following props:
-// - title: the title of the note
-// - date: the date the note was created
-// - content: the content of the note
-// - tags: the tags associated with the note
-// - isPinned: a boolean indicating if the note is pinned
-// - onEdit: a function to call when the edit button is clicked
-// - onDelete: a function to call when the delete button is clicked
-// - onPinNote: a function to call when the pin button is clicked
 export const NoteCard = ({
   title,
   date,
@@ -22,40 +11,72 @@ export const NoteCard = ({
   onDelete,
   onPinNote,
 }) => {
+  console.log("NoteCard rendered:", title, date, content, tags); // Debugging log
+
   return (
     <div className="border rounded p-4 bg-white hover:shadow-xl transition-all ease-in-out">
-      {/* Display the title and date of the note */}
+      {/* Title & Date */}
       <div className="flex items-center justify-between">
         <div>
           <h6 className="text-sm font-medium">{title}</h6>
           <span className="text-xs text-slate-500">{date}</span>
         </div>
-        {/* Display a pin button and call onPinNote when clicked */}
+        {/* Pin Button */}
         <MdOutlinePushPin
-          className={`icon-btn ${isPinned ? "text-primary" : "text-slate-300"}`}
+          className={`icon-btn cursor-pointer ${
+            isPinned ? "text-primary" : "text-slate-300"
+          }`}
           onClick={onPinNote}
-        ></MdOutlinePushPin>
+          aria-label={isPinned ? "Unpin note" : "Pin note"}
+        />
       </div>
-      {/* Display the first 60 characters of the content of the note */}
-      <p className="text-xs text-slate-600 mt-2">{content?.slice(0, 60)}</p>
 
-      {/* Display the tags associated with the note and the edit and delete buttons */}
+      {/* Note Content */}
+      <p className="text-xs text-slate-600 mt-2">{content?.slice(0, 60)}...</p>
+
+      {/* Tags & Actions */}
       <div className="flex items-center justify-between mt-2">
-        <div className="text-xs text-slate-500">{tags}</div>
+        {/* Render tags properly */}
+        <div className="flex gap-1 text-xs text-slate-500">
+          {tags.map((tag, index) => (
+            <span key={index} className="bg-slate-100 px-2 py-1 rounded">
+              #{tag}
+            </span>
+          ))}
+        </div>
+
         <div className="flex items-center gap-2">
-          {/* Display an edit button and call onEdit when clicked */}
+          {/* Edit Button */}
           <MdCreate
-            className="icon-btn hover:text-green-600"
+            className="icon-btn cursor-pointer hover:text-green-600"
             onClick={onEdit}
-          ></MdCreate>
-          {/* Display a delete button and call onDelete when clicked */}
+            aria-label="Edit note"
+          />
+          {/* Delete Button */}
           <MdDelete
-            className="icon-btn hover:text-red-500"
+            className="icon-btn cursor-pointer hover:text-red-500"
             onClick={onDelete}
-          ></MdDelete>
+            aria-label="Delete note"
+          />
         </div>
       </div>
     </div>
   );
 };
 
+NoteCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  date: PropTypes.string.isRequired,
+  content: PropTypes.string.isRequired,
+  tags: PropTypes.arrayOf(PropTypes.string).isRequired,
+  isPinned: PropTypes.bool.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onPinNote: PropTypes.func.isRequired,
+};
+
+NoteCard.defaultProps = {
+  tags: [],
+};
+
+export default NoteCard;
