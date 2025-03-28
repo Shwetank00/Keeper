@@ -7,6 +7,7 @@ export default {
       colors: {
         primary: "#2B85FF",
         secondary: "#EF863E",
+        yell: "#eab308",
       },
     },
   },

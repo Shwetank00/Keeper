@@ -1,20 +1,14 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import PropTypes from "prop-types"; // Import PropTypes
 import { MdAdd, MdClose } from "react-icons/md";
 
-// This is a functional component that renders a tag input field.
-// It takes two props: tags and setTags.
-// Tags is an array of strings that represent the current list of tags.
-// setTags is a function that is used to update the list of tags.
 export const TagInput = ({ tags, setTags }) => {
-  // State variable to store the input value.
   const [inputValue, setInputValue] = useState("");
 
-  // Function to handle input value changes.
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
 
-  // Function to add a new tag when the enter key is pressed.
   const addNewTag = () => {
     if (inputValue.trim() !== "") {
       setTags([...tags, inputValue.trim()]);
@@ -22,22 +16,20 @@ export const TagInput = ({ tags, setTags }) => {
     }
   };
 
-  // Function to handle key down events.
-  const handelKeyDown = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter") {
+      e.preventDefault(); // Prevent form submission on Enter
       addNewTag();
     }
   };
 
-  // Function to handle tag removal.
   const handleRemoveTag = (tagToRemove) => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   return (
     <div>
-      {/* Render the list of tags */}
-      {tags?.length > 0 && (
+      {tags.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap mt-2">
           {tags.map((tag, index) => (
             <span
@@ -46,9 +38,8 @@ export const TagInput = ({ tags, setTags }) => {
             >
               #{tag}
               <button
-                onClick={() => {
-                  handleRemoveTag(tag);
-                }}
+                onClick={() => handleRemoveTag(tag)}
+                aria-label={`Remove tag ${tag}`}
               >
                 <MdClose />
               </button>
@@ -57,7 +48,6 @@ export const TagInput = ({ tags, setTags }) => {
         </div>
       )}
 
-      {/* Render the tag input field */}
       <div className="flex items-center gap-4 mt-3">
         <input
           type="text"
@@ -65,18 +55,23 @@ export const TagInput = ({ tags, setTags }) => {
           className="text-sm bg-transparent border px-3 py-2 rounded outline-none"
           placeholder="Add tags"
           onChange={handleInputChange}
-          onKeyDown={handelKeyDown}
+          onKeyDown={handleKeyDown}
         />
         <button
           className="w-8 h-8 flex items-center justify-center rounded border border-blue-700 hover:bg-blue-700"
-          onClick={() => {
-            addNewTag();
-          }}
+          onClick={addNewTag}
+          aria-label="Add tag"
         >
-          <MdAdd className="text-2xl text-blue-700 hover:text-white"></MdAdd>
+          <MdAdd className="text-2xl text-blue-700 hover:text-white" />
         </button>
       </div>
     </div>
   );
 };
 
+TagInput.propTypes = {
+  tags: PropTypes.arrayOf(PropTypes.string).isRequired,
+  setTags: PropTypes.func.isRequired,
+};
+
+export default TagInput;
