@@ -69,6 +69,41 @@ app.post("/create-account", async (req, res) => {
   });
 });
 
+//!login
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+  if (!password) {
+    return res.status(400).json({ error: "Password is required" });
+  }
+
+  const user = await User.findOne({ email: email });
+
+  if (!user) {
+    return res.json({ error: true, message: "User not found" });
+  }
+
+  if (user.password !== password) {
+    return res.json({ error: true, message: "Invalid password" });
+  }
+
+  const accessToken = jwt.sign(
+    { user },
+    process.env.ACCESS_TOKEN_SECRET || "defaultSecretKey",
+    { expiresIn: "36000m" }
+  );
+
+  return res.json({
+    error: false,
+    user,
+    accessToken,
+    message: "Login successful",
+  });
+});
+
 app.listen(8000, () => console.log("Server running on port 8000"));
 
 module.exports = app;
