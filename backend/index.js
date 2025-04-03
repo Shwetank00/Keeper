@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 
 mongoose.connect(config.connectionString);
 
+const User = require("./models/user.model");
+
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -23,6 +25,48 @@ const accessToken = process.env.ACCESS_TOKEN;
 
 app.get("/", (req, res) => {
   res.json({ data: "Hello World!", token: accessToken });
+});
+
+//!create account
+app.post("/create-account", async (req, res) => {
+  const { fullname, email, password } = req.body;
+
+  if (!fullname) {
+    return res.status(400).json({ error: "Fullname is required" });
+  }
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+  if (!password) {
+    return res.status(400).json({ error: "Password is required" });
+  }
+
+  const isUser = await User.findOne({ email: email });
+
+  if (isUser) {
+    return res.json({ error: true, message: "User already exists" });
+  }
+
+  const user = new User({
+    fullname,
+    email,
+    password,
+  });
+
+  await user.save();
+
+  const accessToken = jwt.sign(
+    { user },
+    process.env.ACCESS_TOKEN_SECRET || "defaultSecretKey",
+    { expiresIn: "36000m" }
+  );
+
+  return res.json({
+    error: false,
+    user,
+    accessToken,
+    message: "Account created successfully",
+  });
 });
 
 app.listen(8000, () => console.log("Server running on port 8000"));
