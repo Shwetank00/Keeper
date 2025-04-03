@@ -1,3 +1,3 @@
 {
-    "connectionString": "mongodb+srv://Shwetank:Shwetank@123@keeper.pmrzlmq.mongodb.net/?retryWrites=true&w=majority&appName=Keeper"
+    "connectionString": "mongodb+srv://Shwetank:Shwetank123@keeper.pmrzlmq.mongodb.net/?retryWrites=true&w=majority&appName=Keeper"
 }
