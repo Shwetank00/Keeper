@@ -75,20 +75,22 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {
-    return res.status(400).json({ error: "Email is required" });
+    return res.status(400).json({ error: true, message: "Email is required" });
   }
   if (!password) {
-    return res.status(400).json({ error: "Password is required" });
+    return res
+      .status(400)
+      .json({ error: true, message: "Password is required" });
   }
 
   const user = await User.findOne({ email: email });
 
   if (!user) {
-    return res.json({ error: true, message: "User not found" });
+    return res.status(404).json({ error: true, message: "User not found" });
   }
 
   if (user.password !== password) {
-    return res.json({ error: true, message: "Invalid password" });
+    return res.status(401).json({ error: true, message: "Invalid password" });
   }
 
   const accessToken = jwt.sign(
