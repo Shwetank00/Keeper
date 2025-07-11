@@ -23,12 +23,16 @@ export const AddEditNotes = ({ noteData, type, onClose, onSave }) => {
     setError("");
 
     const newNote = {
-      id: noteData?.id || Date.now(),
       title,
       content,
       tags,
-      isPinned: false,
     };
+
+    // If editing, include _id so backend knows which note
+    if (type === "edit" && noteData?._id) {
+      newNote._id = noteData._id;
+    }
+
     onSave(newNote); // Call the save function from parent
     onClose(); // Close the modal
   };
@@ -76,7 +80,7 @@ export const AddEditNotes = ({ noteData, type, onClose, onSave }) => {
       {/* Error message */}
       {error && <p className="text-red-500 text-xs pt-4">{error}</p>}
 
-      {/* Add button */}
+      {/* Add / Update button */}
       <button
         className="btn-primary font-medium mt-5 p-3"
         onClick={handleSubmit}
@@ -90,17 +94,17 @@ export const AddEditNotes = ({ noteData, type, onClose, onSave }) => {
 // Define PropTypes
 AddEditNotes.propTypes = {
   noteData: PropTypes.shape({
-    id: PropTypes.number,
+    _id: PropTypes.string, // use _id instead of id
     title: PropTypes.string,
     content: PropTypes.string,
     tags: PropTypes.arrayOf(PropTypes.string),
   }),
-  type: PropTypes.oneOf(["add", "edit"]).isRequired, // Must be either "add" or "edit"
-  onClose: PropTypes.func.isRequired, // Function to close the modal
-  onSave: PropTypes.func.isRequired, // Function to save the note
+  type: PropTypes.oneOf(["add", "edit"]).isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSave: PropTypes.func.isRequired,
 };
 
-// Default props (if noteData is not provided)
+// Default props
 AddEditNotes.defaultProps = {
   noteData: {
     title: "",

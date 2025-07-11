@@ -1,3 +1,4 @@
+import moment from "moment";
 import PropTypes from "prop-types";
 import { MdOutlinePushPin, MdCreate, MdDelete } from "react-icons/md";
 
@@ -11,17 +12,16 @@ export const NoteCard = ({
   onDelete,
   onPinNote,
 }) => {
-  console.log("NoteCard rendered:", title, date, content, tags); // Debugging log
-
   return (
-    <div className="border rounded p-4 bg-white hover:shadow-xl transition-all ease-in-out">
-      {/* Title & Date */}
+    <div className="border rounded p-4 bg-white hover:shadow-xl transition-all ease-in-out flex flex-col justify-between h-full">
+      {/* Header: title + date + pin */}
       <div className="flex items-center justify-between">
         <div>
           <h6 className="text-sm font-medium">{title}</h6>
-          <span className="text-xs text-slate-500">{date}</span>
+          <span className="text-xs text-green-600">
+            {moment(date).format("Do MMM YYYY")}
+          </span>
         </div>
-        {/* Pin Button */}
         <MdOutlinePushPin
           className={`icon-btn cursor-pointer ${
             isPinned ? "text-primary" : "text-slate-300"
@@ -31,28 +31,27 @@ export const NoteCard = ({
         />
       </div>
 
-      {/* Note Content */}
+      {/* Note content preview */}
       <p className="text-xs text-slate-600 mt-2">{content?.slice(0, 60)}...</p>
 
-      {/* Tags & Actions */}
-      <div className="flex items-center justify-between mt-2">
-        {/* Render tags properly */}
-        <div className="flex gap-1 text-xs text-slate-500">
+      {/* Bottom row: tags on left, icons on right */}
+      <div className="flex items-center justify-between mt-auto pt-2">
+        <div className="flex flex-wrap gap-1">
           {tags.map((tag, index) => (
-            <span key={index} className="bg-slate-100 px-2 py-1 rounded">
+            <span
+              key={index}
+              className="bg-slate-100 text-xs px-2 py-1 rounded"
+            >
               #{tag}
             </span>
           ))}
         </div>
-
         <div className="flex items-center gap-2">
-          {/* Edit Button */}
           <MdCreate
             className="icon-btn cursor-pointer hover:text-green-600"
             onClick={onEdit}
             aria-label="Edit note"
           />
-          {/* Delete Button */}
           <MdDelete
             className="icon-btn cursor-pointer hover:text-red-500"
             onClick={onDelete}

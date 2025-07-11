@@ -1,158 +1,249 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Modal from "react-modal";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { NoteCard } from "../../components/Cards/NoteCard";
-import { MdAdd } from "react-icons/md";
 import { AddEditNotes } from "./AddEditNotes";
-import Modal from "react-modal";
-import { useNavigate } from "react-router-dom";
+import { MdAdd } from "react-icons/md";
 import axiosInstance from "../../utils/axiosInstanse";
+import Toast from "../../components/ToastMessage/Toast";
 
 export const Home = () => {
-  const [openAddEditModal, setOpenAddEditModal] = useState({
+  // State: modal visibility & mode (add/edit)
+  const [modalState, setModalState] = useState({
     isShown: false,
     type: "add",
     data: null,
   });
 
+  // Toast state
+  const [toast, setToast] = useState({
+    isShown: false,
+    message: "",
+    type: "success", // 'success' or 'delete'
+  });
+
+  // Notes and user state
   const [notes, setNotes] = useState([]);
-  const [userInfo, setUserInfo] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
 
-  // ✅ CHANGED: useEffect must be at top-level, outside any function
+  // Fetch user & notes on mount
   useEffect(() => {
-    getUserInfo();
-    fetchNotes(); // ✅ NEW: fetch notes on component mount
+    const init = async () => {
+      try {
+        await fetchUser();
+        await fetchNotes();
+      } catch (err) {
+        console.error("Initialization failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
-  // ✅ Function to get user info
-  const getUserInfo = async () => {
+  // Fetch logged-in user info
+  const fetchUser = async () => {
     try {
-      const response = await axiosInstance.get("/get-user");
-      if (response.data?.user) {
-        setUserInfo(response.data.user);
+      const res = await axiosInstance.get("/get-user");
+      if (res.data?.user) {
+        setUser(res.data.user);
       } else {
         navigate("/login");
       }
-    } catch (error) {
-      if (error.response?.status === 401) {
-        localStorage.clear(); // ✅ Clear token if unauthorized
+    } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.clear();
         navigate("/login");
       }
     }
   };
 
-  // ✅ NEW: Function to fetch notes from backend
+  // Fetch notes
   const fetchNotes = async () => {
     try {
-      const response = await axiosInstance.get("/notes");
-      if (response.data?.notes) {
-        setNotes(response.data.notes);
-      }
-    } catch (error) {
-      console.error("Failed to fetch notes:", error);
+      const res = await axiosInstance.get("/get-all-notes");
+      setNotes(res.data?.notes || []);
+    } catch (err) {
+      console.error("Failed to fetch notes:", err.response?.data || err);
     }
   };
 
-  // ✅ Function to add a new note
-  const handleAddNote = (newNote) => {
-    const noteWithId = { ...newNote, id: Date.now(), isPinned: false };
-    setNotes([...notes, noteWithId]);
-    setOpenAddEditModal({ isShown: false, type: "add", data: null });
+  // Show toast
+  const showToast = (message, type = "success") => {
+    setToast({ isShown: true, message, type });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, isShown: false }));
+    }, 3000);
   };
 
-  // ✅ Function to edit a note
-  const handleEditNote = (updatedNote) => {
-    setNotes(
-      notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
-    );
-    setOpenAddEditModal({ isShown: false, type: "add", data: null });
+  // Close modal
+  const closeModal = () =>
+    setModalState({ isShown: false, type: "add", data: null });
+
+  // Add new note
+  const addNote = async (newNote) => {
+    try {
+      const res = await axiosInstance.post("/add-note", newNote);
+      if (res.data?.note) {
+        setNotes((prev) => [...prev, res.data.note]);
+        showToast("Note Added Successfully", "success");
+      }
+      closeModal();
+    } catch (err) {
+      console.error("Failed to add note:", err.response?.data || err);
+      showToast("Failed to add note", "delete");
+    }
   };
 
-  // ✅ Function to delete a note
-  const handleDeleteNote = (id) => {
-    setNotes(notes.filter((note) => note.id !== id));
+  // Edit existing note
+  const editNote = async (updatedNote) => {
+    try {
+      const res = await axiosInstance.put(
+        `/edit-note/${updatedNote._id}`,
+        updatedNote
+      );
+      if (res.data?.note) {
+        setNotes((prev) =>
+          prev.map((note) =>
+            note._id === updatedNote._id ? res.data.note : note
+          )
+        );
+        showToast("Note Updated Successfully", "success");
+      }
+      closeModal();
+    } catch (err) {
+      console.error("Failed to edit note:", err.response?.data || err);
+      showToast("Failed to update note", "delete");
+    }
   };
 
-  // ✅ Function to pin/unpin a note
-  const handlePinNote = (id) => {
-    setNotes((prevNotes) =>
-      prevNotes.map((note) =>
-        note.id === id ? { ...note, isPinned: !note.isPinned } : note
-      )
-    );
+  // Delete note
+  const deleteNote = async (id) => {
+    try {
+      await axiosInstance.delete(`/delete-note/${id}`);
+      setNotes((prev) => prev.filter((note) => note._id !== id));
+      showToast("Note Deleted Successfully", "delete");
+    } catch (err) {
+      console.error("Failed to delete note:", err.response?.data || err);
+      showToast("Failed to delete note", "delete");
+    }
+  };
+
+  // Toggle pin/unpin
+  const togglePin = async (id) => {
+    try {
+      const targetNote = notes.find((note) => note._id === id);
+      if (!targetNote) return;
+
+      const res = await axiosInstance.put(`/update-note-pinned/${id}`, {
+        isPinned: !targetNote.isPinned,
+      });
+      if (res.data?.note) {
+        setNotes((prev) =>
+          prev.map((note) => (note._id === id ? res.data.note : note))
+        );
+        showToast(
+          res.data.note.isPinned ? "Note pinned" : "Note unpinned",
+          "success"
+        );
+      }
+    } catch (err) {
+      console.error("Failed to pin/unpin note:", err.response?.data || err);
+      showToast("Failed to pin/unpin note", "delete");
+    }
+  };
+
+  // Modal styles
+  const modalStyles = {
+    overlay: { backgroundColor: "rgba(0,0,0,0.2)" },
+    content: {
+      maxWidth: "40%",
+      maxHeight: "75%",
+      margin: "3.5rem auto",
+      padding: "1.25rem",
+      overflow: "auto",
+      borderRadius: "0.375rem",
+    },
   };
 
   return (
     <>
-      {userInfo ? (
+      {loading ? (
+        <p className="text-center mt-10 text-gray-500">Loading...</p>
+      ) : user ? (
         <>
-          <Navbar userInfo={userInfo} />
-          {/* rest of the Home page */}
+          <Navbar userInfo={user} />
+
           <div className="container mx-auto">
             {notes.length === 0 ? (
-              <p className="text-center text-gray-500 mt-10">
-                No notes available. Click + to add one!
-              </p>
+              <EmptyCard />
             ) : (
               <div className="grid grid-cols-3 gap-4 mt-8">
                 {notes
-                  .sort((a, b) => b.isPinned - a.isPinned)
+                  .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
                   .map((note) => (
                     <NoteCard
-                      key={note.id}
+                      key={note._id}
                       title={note.title}
-                      date={note.date}
                       content={note.content}
+                      date={note.createdOn}
                       tags={note.tags}
                       isPinned={note.isPinned}
                       onEdit={() =>
-                        setOpenAddEditModal({
+                        setModalState({
                           isShown: true,
                           type: "edit",
                           data: note,
                         })
                       }
-                      onDelete={() => handleDeleteNote(note.id)}
-                      onPinNote={() => handlePinNote(note.id)}
+                      onDelete={() => deleteNote(note._id)}
+                      onPinNote={() => togglePin(note._id)}
                     />
                   ))}
               </div>
             )}
           </div>
 
+          {/* Floating add button */}
           <button
-            className="w-16 h-16 flex items-center justify-center rounded-2xl bg-primary hover:bg-blue-600 absolute right-10 bottom-10"
+            className="w-16 h-16 flex items-center justify-center rounded-2xl bg-primary hover:bg-blue-600 fixed right-10 bottom-10"
             onClick={() =>
-              setOpenAddEditModal({ isShown: true, type: "add", data: null })
+              setModalState({ isShown: true, type: "add", data: null })
             }
           >
             <MdAdd className="text-[32px] text-white" />
           </button>
 
+          {/* Add/Edit modal */}
           <Modal
-            isOpen={openAddEditModal.isShown}
-            onRequestClose={() =>
-              setOpenAddEditModal({ isShown: false, type: "add", data: null })
-            }
-            style={{ overlay: { backgroundColor: "rgba(0,0,0,0.2)" } }}
-            className="w-[40%] max-h-3/4 bg-white rounded-md mx-auto mt-14 p-5 overflow-scroll"
+            isOpen={modalState.isShown}
+            onRequestClose={closeModal}
+            style={modalStyles}
           >
             <AddEditNotes
-              type={openAddEditModal.type}
-              noteData={openAddEditModal.data}
-              onClose={() =>
-                setOpenAddEditModal({ isShown: false, type: "add", data: null })
-              }
-              onSave={
-                openAddEditModal.type === "edit"
-                  ? handleEditNote
-                  : handleAddNote
-              }
+              type={modalState.type}
+              noteData={modalState.data}
+              onClose={closeModal}
+              onSave={modalState.type === "edit" ? editNote : addNote}
+              showToast={showToast}
             />
           </Modal>
+
+          <Toast
+            isShown={toast.isShown}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast((prev) => ({ ...prev, isShown: false }))}
+          />
         </>
       ) : (
-        <p className="text-center mt-10 text-gray-500">Loading...</p>
+        <p className="text-center mt-10 text-gray-500">
+          Unauthorized. Redirecting...
+        </p>
       )}
     </>
   );
