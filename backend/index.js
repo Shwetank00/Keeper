@@ -1,6 +1,5 @@
-require("dotenv").config(); // Load environment variables
+require("dotenv").config(); // Load environment variables from .env
 
-const config = require("./config.json");
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
@@ -10,10 +9,20 @@ const { authenticateToken } = require("./utilities");
 
 const app = express();
 
+// ✅ Use MONGO_URI from environment instead of hardcoded config.json
+const mongoUri = process.env.MONGO_URI;
+if (!mongoUri) {
+  console.error("❌ Missing MONGO_URI environment variable");
+  process.exit(1);
+}
+
 // Connect to MongoDB
-mongoose.connect(config.connectionString);
+mongoose.connect(mongoUri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 mongoose.connection.on("connected", () => {
-  console.log("✅ Connected to MongoDB");
+  console.log("✅ Connected to MongoDB Atlas");
 });
 mongoose.connection.on("error", (err) => {
   console.error("❌ MongoDB connection error:", err);
@@ -23,11 +32,17 @@ mongoose.connection.on("error", (err) => {
 const User = require("./models/user.model");
 const Note = require("./models/note.model");
 
-// Configure middlewares
+// Middlewares
 app.use(express.json());
-app.use(cors({ origin: "*" }));
 
-// Configure Nodemailer transporter
+// ✅ Use CORS properly (allow your frontend URL in production)
+const allowedOrigins = [process.env.FRONTEND_URL || "*"];
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true, // if needed
+}));
+
+// Configure Nodemailer
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -36,12 +51,24 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Example root route to check if server is running
-const accessToken = process.env.ACCESS_TOKEN_SECRET;
-
+// Example root route
 app.get("/", (req, res) => {
-  res.json({ data: "Server is Running!!", token: accessToken });
+  res.json({ data: "Server is Running!!" });
 });
+
+// ✅ Read JWT secret from env
+const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+if (!accessTokenSecret) {
+  console.error("❌ Missing ACCESS_TOKEN_SECRET environment variable");
+  process.exit(1);
+}
+
+// ✅ Listen on port from env or default to 5000
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
 
 //! Create account + send OTP first
 app.post("/create-account", async (req, res) => {
