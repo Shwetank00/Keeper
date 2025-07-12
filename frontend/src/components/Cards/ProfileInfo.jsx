@@ -15,7 +15,13 @@ export const ProfileInfo = ({ userInfo, onLogout }) => {
         <p className="text-sm text-slate-950 font-medium">
           {userInfo.fullname}
         </p>
-        <button className="text-sm text-slate-950 underline" onClick={onLogout}>
+        <button
+          className="
+      text-xs px-3 py-1 rounded-full bg-red-50 text-red-600 font-medium
+      hover:bg-red-100 hover:text-red-700 transition-colors duration-200
+    "
+          onClick={onLogout}
+        >
           Logout
         </button>
       </div>
