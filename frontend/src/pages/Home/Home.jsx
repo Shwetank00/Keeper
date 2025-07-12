@@ -1,37 +1,52 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "react-modal";
+import { MdAdd } from "react-icons/md";
+import axiosInstance from "../../utils/axiosInstanse";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { NoteCard } from "../../components/Cards/NoteCard";
 import { AddEditNotes } from "./AddEditNotes";
-import { MdAdd } from "react-icons/md";
-import axiosInstance from "../../utils/axiosInstanse";
 import Toast from "../../components/ToastMessage/Toast";
 import EmptyCard from "../../components/EmptyCard/EmptyCard";
 
 export const Home = () => {
-  // State: modal visibility & mode (add/edit)
+  // State: modal open/close and mode (add/edit)
   const [modalState, setModalState] = useState({
     isShown: false,
     type: "add",
     data: null,
   });
 
-  // Toast state
+  // State: toast notification
   const [toast, setToast] = useState({
     isShown: false,
     message: "",
-    type: "success", // 'success' or 'delete'
+    type: "success",
   });
 
-  // Notes and user state
-  const [notes, setNotes] = useState([]);
+  // State: user data and notes list
   const [user, setUser] = useState(null);
+  const [notes, setNotes] = useState([]);
+
+  // State: loading indicator
   const [loading, setLoading] = useState(true);
+
+  // State: search query text
+  const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
 
-  // Fetch user & notes on mount
+  // Show toast message
+  const showToast = (message, type = "success") => {
+    setToast({ isShown: true, message, type });
+  };
+
+  // Close toast message
+  const handleCloseToast = () => {
+    setToast((prev) => ({ ...prev, isShown: false }));
+  };
+
+  // Fetch user and notes on initial mount
   useEffect(() => {
     const init = async () => {
       try {
@@ -46,7 +61,7 @@ export const Home = () => {
     init();
   }, []);
 
-  // Fetch logged-in user info
+  // Fetch logged-in user details
   const fetchUser = async () => {
     try {
       const res = await axiosInstance.get("/get-user");
@@ -63,7 +78,7 @@ export const Home = () => {
     }
   };
 
-  // Fetch notes
+  // Fetch all notes for the user
   const fetchNotes = async () => {
     try {
       const res = await axiosInstance.get("/get-all-notes");
@@ -73,25 +88,13 @@ export const Home = () => {
     }
   };
 
-  // Show toast
-  const showToast = (message, type = "success") => {
-    setToast({ isShown: true, message, type });
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, isShown: false }));
-    }, 3000);
-  };
-
-  // Close modal
-  const closeModal = () =>
-    setModalState({ isShown: false, type: "add", data: null });
-
-  // Add new note
+  // Add a new note
   const addNote = async (newNote) => {
     try {
       const res = await axiosInstance.post("/add-note", newNote);
       if (res.data?.note) {
         setNotes((prev) => [...prev, res.data.note]);
-        showToast("Note Added Successfully", "success");
+        showToast("Note added successfully", "success");
       }
       closeModal();
     } catch (err) {
@@ -100,7 +103,7 @@ export const Home = () => {
     }
   };
 
-  // Edit existing note
+  // Edit an existing note
   const editNote = async (updatedNote) => {
     try {
       const res = await axiosInstance.put(
@@ -113,7 +116,7 @@ export const Home = () => {
             note._id === updatedNote._id ? res.data.note : note
           )
         );
-        showToast("Note Updated Successfully", "success");
+        showToast("Note updated successfully", "success");
       }
       closeModal();
     } catch (err) {
@@ -122,19 +125,19 @@ export const Home = () => {
     }
   };
 
-  // Delete note
+  // Delete a note by ID
   const deleteNote = async (id) => {
     try {
       await axiosInstance.delete(`/delete-note/${id}`);
       setNotes((prev) => prev.filter((note) => note._id !== id));
-      showToast("Note Deleted Successfully", "delete");
+      showToast("Note deleted successfully", "delete");
     } catch (err) {
       console.error("Failed to delete note:", err.response?.data || err);
       showToast("Failed to delete note", "delete");
     }
   };
 
-  // Toggle pin/unpin
+  // Toggle pin/unpin for a note
   const togglePin = async (id) => {
     try {
       const targetNote = notes.find((note) => note._id === id);
@@ -143,6 +146,7 @@ export const Home = () => {
       const res = await axiosInstance.put(`/update-note-pinned/${id}`, {
         isPinned: !targetNote.isPinned,
       });
+
       if (res.data?.note) {
         setNotes((prev) =>
           prev.map((note) => (note._id === id ? res.data.note : note))
@@ -158,7 +162,19 @@ export const Home = () => {
     }
   };
 
-  // Modal styles
+  // Close modal and reset modal state
+  const closeModal = () => {
+    setModalState({ isShown: false, type: "add", data: null });
+  };
+
+  // Filter and sort notes based on search query & pinned status
+  const filteredNotes = notes
+    .filter((note) =>
+      note.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+  // Custom styles for modal
   const modalStyles = {
     overlay: { backgroundColor: "rgba(0,0,0,0.2)" },
     content: {
@@ -177,10 +193,16 @@ export const Home = () => {
         <p className="text-center mt-10 text-gray-500">Loading...</p>
       ) : user ? (
         <>
-          <Navbar userInfo={user} />
+          {/* Navbar at top */}
+          <Navbar
+            userInfo={user}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
 
+          {/* List of notes or empty card */}
           <div className="container mx-auto">
-            {notes.length === 0 ? (
+            {filteredNotes.length === 0 ? (
               <EmptyCard
                 onAdd={() =>
                   setModalState({ isShown: true, type: "add", data: null })
@@ -188,27 +210,21 @@ export const Home = () => {
               />
             ) : (
               <div className="grid grid-cols-3 gap-4 mt-8">
-                {notes
-                  .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
-                  .map((note) => (
-                    <NoteCard
-                      key={note._id}
-                      title={note.title}
-                      content={note.content}
-                      date={note.createdOn}
-                      tags={note.tags}
-                      isPinned={note.isPinned}
-                      onEdit={() =>
-                        setModalState({
-                          isShown: true,
-                          type: "edit",
-                          data: note,
-                        })
-                      }
-                      onDelete={() => deleteNote(note._id)}
-                      onPinNote={() => togglePin(note._id)}
-                    />
-                  ))}
+                {filteredNotes.map((note) => (
+                  <NoteCard
+                    key={note._id}
+                    title={note.title}
+                    content={note.content}
+                    date={note.createdOn}
+                    tags={note.tags}
+                    isPinned={note.isPinned}
+                    onEdit={() =>
+                      setModalState({ isShown: true, type: "edit", data: note })
+                    }
+                    onDelete={() => deleteNote(note._id)}
+                    onPinNote={() => togglePin(note._id)}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -238,11 +254,12 @@ export const Home = () => {
             />
           </Modal>
 
+          {/* Toast message */}
           <Toast
             isShown={toast.isShown}
             message={toast.message}
             type={toast.type}
-            onClose={() => setToast((prev) => ({ ...prev, isShown: false }))}
+            onClose={handleCloseToast}
           />
         </>
       ) : (
