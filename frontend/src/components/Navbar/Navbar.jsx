@@ -1,46 +1,50 @@
-import { useState } from "react";
+import PropTypes from "prop-types";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileInfo } from "../Cards/ProfileInfo";
-import { useNavigate, useLocation } from "react-router-dom"; // ✅ Import useLocation
 import { SearchBar } from "../SearchBar/SearchBar";
 
-export const Navbar = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+export const Navbar = ({ userInfo, searchQuery, setSearchQuery }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ Get current route
+  const location = useLocation();
 
-  console.log("Current Path:", location.pathname); // ✅ Debugging log
+  // Check if current page is login/signup
+  const authPages = ["/login", "/signup"];
+  const isAuthPage = authPages.includes(location.pathname.toLowerCase());
 
+  // Handle logout
   const onLogout = () => {
-    navigate("/Login");
+    localStorage.clear();
+    navigate("/login");
   };
 
-  const handleSearch = () => {
-    console.log("Searching for:", searchQuery);
-  };
-
+  // Clear search query
   const onClearSearch = () => {
     setSearchQuery("");
   };
-
-  // ✅ Ensure pathname check is case-insensitive
-  const authPages = ["/login", "/signup"];
-  const isAuthPage = authPages.includes(location.pathname.toLowerCase());
 
   return (
     <div className="bg-yell flex items-center justify-between px-6 py-2 drop-shadow">
       <h2 className="text-xl text-white font-medium py-2">Notes</h2>
 
-      {!isAuthPage && ( // ✅ Hide SearchBar & ProfileInfo on login/signup pages
+      {!isAuthPage && (
         <>
           <SearchBar
             value={searchQuery}
             onChange={({ target }) => setSearchQuery(target.value)}
-            handleSearch={handleSearch}
             onClearSearch={onClearSearch}
           />
-          <ProfileInfo onLogout={onLogout} />
+          <ProfileInfo userInfo={userInfo} onLogout={onLogout} />
         </>
       )}
     </div>
   );
+};
+
+// ✅ PropTypes validation
+Navbar.propTypes = {
+  userInfo: PropTypes.shape({
+    fullname: PropTypes.string.isRequired,
+  }).isRequired,
+  searchQuery: PropTypes.string.isRequired,
+  setSearchQuery: PropTypes.func.isRequired,
 };

@@ -1,73 +1,106 @@
-require("dotenv").config();
+require("dotenv").config(); // Load environment variables
 
 const config = require("./config.json");
 const mongoose = require("mongoose");
-
-mongoose.connect(config.connectionString);
-
-const User = require("./models/user.model");
-const Note = require("./models/note.model");
-
 const express = require("express");
 const cors = require("cors");
-const app = express();
-
+const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const { authenticateToken } = require("./utilities");
 
-app.use(express.json());
-app.use(
-  cors({
-    origin: "*",
-  })
-);
+const app = express();
 
+// Connect to MongoDB
+mongoose.connect(config.connectionString);
+mongoose.connection.on("connected", () => {
+  console.log("✅ Connected to MongoDB");
+});
+mongoose.connection.on("error", (err) => {
+  console.error("❌ MongoDB connection error:", err);
+});
+
+// Import models
+const User = require("./models/user.model");
+const Note = require("./models/note.model");
+
+// Configure middlewares
+app.use(express.json());
+app.use(cors({ origin: "*" }));
+
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// Example root route to check if server is running
 const accessToken = process.env.ACCESS_TOKEN_SECRET;
 
 app.get("/", (req, res) => {
-  res.json({ data: "Hello World!", token: accessToken });
+  res.json({ data: "Server is Running!!", token: accessToken });
 });
 
-//!create account
+//! Create account + send OTP first
 app.post("/create-account", async (req, res) => {
   const { fullname, email, password } = req.body;
 
-  if (!fullname) {
-    return res.status(400).json({ error: "Fullname is required" });
-  }
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" });
-  }
-  if (!password) {
-    return res.status(400).json({ error: "Password is required" });
+  if (!fullname || !email || !password) {
+    return res
+      .status(400)
+      .json({ error: true, message: "All fields are required" });
   }
 
-  const isUser = await User.findOne({ email: email });
-
+  const isUser = await User.findOne({ email });
   if (isUser) {
     return res.json({ error: true, message: "User already exists" });
   }
 
-  const user = new User({
-    fullname,
-    email,
-    password,
-  });
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-  await user.save();
+  try {
+    // Send OTP
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: "Verify your email",
+      text: `Your OTP code is: ${otp}`,
+    });
+    console.log("Signup OTP sent:", otp);
 
-  const accessToken = jwt.sign(
-    { user },
-    process.env.ACCESS_TOKEN_SECRET || "defaultSecretKey",
-    { expiresIn: "36000m" }
-  );
+    // Save user
+    const user = new User({
+      fullname,
+      email,
+      password,
+      emailOtp: otp,
+      otpExpires,
+      emailVerified: false,
+    });
+    await user.save();
 
-  return res.json({
-    error: false,
-    user,
-    accessToken,
-    message: "Account created successfully",
-  });
+    const accessToken = jwt.sign(
+      { user },
+      process.env.ACCESS_TOKEN_SECRET || "defaultSecretKey",
+      { expiresIn: "36000m" }
+    );
+
+    return res.json({
+      error: false,
+      user,
+      accessToken,
+      message: "Account created. OTP sent to email",
+    });
+  } catch (err) {
+    console.error("Failed to send OTP:", err);
+    return res
+      .status(400)
+      .json({ error: true, message: "Invalid or unreachable email address" });
+  }
 });
 
 //!login
@@ -75,20 +108,22 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {
-    return res.status(400).json({ error: "Email is required" });
+    return res.status(400).json({ error: true, message: "Email is required" });
   }
   if (!password) {
-    return res.status(400).json({ error: "Password is required" });
+    return res
+      .status(400)
+      .json({ error: true, message: "Password is required" });
   }
 
   const user = await User.findOne({ email: email });
 
   if (!user) {
-    return res.json({ error: true, message: "User not found" });
+    return res.status(404).json({ error: true, message: "User not found" });
   }
 
   if (user.password !== password) {
-    return res.json({ error: true, message: "Invalid password" });
+    return res.status(401).json({ error: true, message: "Invalid password" });
   }
 
   const accessToken = jwt.sign(
@@ -161,7 +196,12 @@ app.put("/edit-note/:noteId", authenticateToken, async (req, res) => {
   const { title, content, tags, isPinned } = req.body;
   const { user } = req.user;
 
-  if (!title && !content && !tags) {
+  if (
+    title === undefined &&
+    content === undefined &&
+    tags === undefined &&
+    isPinned === undefined
+  ) {
     return res
       .status(400)
       .json({ error: true, message: "No changes provided" });
@@ -174,10 +214,10 @@ app.put("/edit-note/:noteId", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: true, message: "Note not found" });
     }
 
-    if (title) note.title = title;
-    if (content) note.content = content;
-    if (tags) note.tags = tags;
-    if (isPinned) note.isPinned = isPinned;
+    if (title !== undefined) note.title = title;
+    if (content !== undefined) note.content = content;
+    if (tags !== undefined) note.tags = tags;
+    if (isPinned !== undefined) note.isPinned = isPinned;
 
     await note.save();
 
@@ -187,6 +227,7 @@ app.put("/edit-note/:noteId", authenticateToken, async (req, res) => {
       message: "Note updated successfully",
     });
   } catch (error) {
+    console.error("Edit note failed:", error);
     return res
       .status(500)
       .json({ error: true, message: "Internal server error" });
@@ -260,6 +301,203 @@ app.put("/update-note-pinned/:noteId", authenticateToken, async (req, res) => {
       message: "Note updated successfully",
     });
   } catch (error) {
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//!Search notes
+app.get("/search-notes/", authenticateToken, async (req, res) => {
+  const { searchQuery } = req.query;
+  const { user } = req.user;
+
+  if (!searchQuery) {
+    return res
+      .status(400)
+      .json({ error: true, message: "Search query is required" });
+  }
+
+  try {
+    const notes = await Note.find({
+      userId: user._id,
+      $or: [
+        { title: { $regex: searchQuery, $options: "i" } },
+        { content: { $regex: searchQuery, $options: "i" } },
+        { tags: { $regex: searchQuery, $options: "i" } },
+      ],
+    });
+
+    return res.json({
+      error: false,
+      notes,
+      message: "Notes fetched successfully",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//! Update profile + send OTP if email changes
+app.put("/update-profile", authenticateToken, async (req, res) => {
+  const { fullname, email } = req.body;
+  const { user } = req.user;
+
+  if (!fullname && !email) {
+    return res
+      .status(400)
+      .json({ error: true, message: "No changes provided" });
+  }
+
+  try {
+    const existingUser = await User.findById(user._id);
+    if (!existingUser)
+      return res.status(404).json({ error: true, message: "User not found" });
+
+    if (fullname) existingUser.fullname = fullname;
+
+    if (email && email !== existingUser.email) {
+      // Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      existingUser.emailOtp = otp;
+      existingUser.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      existingUser.emailVerified = false;
+
+      try {
+        await transporter.sendMail({
+          from: process.env.SMTP_USER,
+          to: email,
+          subject: "Verify your new email",
+          text: `Your OTP code is: ${otp}`,
+        });
+        console.log("Profile update OTP sent:", otp);
+        existingUser.email = email;
+      } catch (err) {
+        console.error("Failed to send OTP:", err);
+        return res.status(400).json({
+          error: true,
+          message: "Invalid or unreachable new email address",
+        });
+      }
+    }
+
+    await existingUser.save();
+    return res.json({ error: false, message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("Update profile failed:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//! Verify email OTP
+app.post("/verify-email-otp", authenticateToken, async (req, res) => {
+  const { otp } = req.body;
+  const { user } = req.user;
+
+  if (!otp)
+    return res.status(400).json({ error: true, message: "OTP is required" });
+
+  try {
+    const existingUser = await User.findById(user._id);
+    if (!existingUser)
+      return res.status(404).json({ error: true, message: "User not found" });
+
+    if (
+      existingUser.emailOtp === otp &&
+      existingUser.otpExpires &&
+      existingUser.otpExpires > new Date()
+    ) {
+      existingUser.emailVerified = true;
+      existingUser.emailOtp = null;
+      existingUser.otpExpires = null;
+      await existingUser.save();
+
+      return res.json({ error: false, message: "Email verified successfully" });
+    } else {
+      return res
+        .status(400)
+        .json({ error: true, message: "Invalid or expired OTP" });
+    }
+  } catch (err) {
+    console.error("Verify OTP failed:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//! Change password
+app.put("/change-password", authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const { user } = req.user;
+
+  if (!currentPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ error: true, message: "Both fields are required" });
+  }
+
+  try {
+    const existingUser = await User.findById(user._id);
+    if (!existingUser)
+      return res.status(404).json({ error: true, message: "User not found" });
+
+    if (existingUser.password !== currentPassword) {
+      return res
+        .status(401)
+        .json({ error: true, message: "Current password incorrect" });
+    }
+
+    existingUser.password = newPassword;
+    await existingUser.save();
+
+    return res.json({ error: false, message: "Password changed successfully" });
+  } catch (err) {
+    console.error("Change password failed:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//! Forgot password (send OTP)
+app.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  if (!email)
+    return res.status(400).json({ error: true, message: "Email is required" });
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(404).json({ error: true, message: "User not found" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.emailOtp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: email,
+        subject: "Reset your password",
+        text: `Your OTP code is: ${otp}`,
+      });
+      console.log("Forgot password OTP sent:", otp);
+
+      await user.save();
+      return res.json({ error: false, message: "OTP sent to your email" });
+    } catch (err) {
+      console.error("Failed to send OTP:", err);
+      return res
+        .status(400)
+        .json({ error: true, message: "Invalid or unreachable email address" });
+    }
+  } catch (err) {
+    console.error("Forgot password failed:", err);
     return res
       .status(500)
       .json({ error: true, message: "Internal server error" });
