@@ -7,6 +7,7 @@ import { AddEditNotes } from "./AddEditNotes";
 import { MdAdd } from "react-icons/md";
 import axiosInstance from "../../utils/axiosInstanse";
 import Toast from "../../components/ToastMessage/Toast";
+import EmptyCard from "../../components/EmptyCard/EmptyCard";
 
 export const Home = () => {
   // State: modal visibility & mode (add/edit)
@@ -180,7 +181,11 @@ export const Home = () => {
 
           <div className="container mx-auto">
             {notes.length === 0 ? (
-              <EmptyCard />
+              <EmptyCard
+                onAdd={() =>
+                  setModalState({ isShown: true, type: "add", data: null })
+                }
+              />
             ) : (
               <div className="grid grid-cols-3 gap-4 mt-8">
                 {notes
