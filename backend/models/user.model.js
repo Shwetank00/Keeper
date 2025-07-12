@@ -7,6 +7,9 @@ const userschema = new Schema({
   email: { type: String }, // Field to store the user's email as a string
   password: { type: String }, // Field to store the user's password as a string
   createdON: { type: Date, default: new Date().getTime() }, // Field to store the creation date, defaulting to the current timestamp
+  emailVerified: { type: Boolean, default: false },
+  emailOtp: { type: String },
+  otpExpires: { type: Date },
 });
 
 // Exporting the User model based on the defined schema
