@@ -1,16 +1,17 @@
-const mongoose = require("mongoose"); // Importing the mongoose library to interact with MongoDB
-const Schema = mongoose.Schema; // Extracting the Schema constructor from mongoose
+const mongoose = require("mongoose"); // Import mongoose to interact with MongoDB
+const Schema = mongoose.Schema;
 
-// Defining the schema for the User model
+// Define the schema for the User model
 const userschema = new Schema({
-  fullname: { type: String }, // Field to store the user's full name as a string
-  email: { type: String }, // Field to store the user's email as a string
-  password: { type: String }, // Field to store the user's password as a string
-  createdON: { type: Date, default: new Date().getTime() }, // Field to store the creation date, defaulting to the current timestamp
-  emailVerified: { type: Boolean, default: false },
-  emailOtp: { type: String },
-  otpExpires: { type: Date },
+  fullname: { type: String, required: true }, // User's full name
+  email: { type: String, required: true, unique: true }, // Current active email
+  pendingEmail: { type: String }, // New email waiting for verification
+  password: { type: String, required: true }, // User's hashed password
+  createdON: { type: Date, default: Date.now }, // Date of creation
+  emailVerified: { type: Boolean, default: false }, // Whether email is verified
+  emailOtp: { type: String }, // OTP code sent to user
+  otpExpires: { type: Date }, // When the OTP expires
 });
 
-// Exporting the User model based on the defined schema
+// Export the User model based on the defined schema
 module.exports = mongoose.model("User", userschema);
