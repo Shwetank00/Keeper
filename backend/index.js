@@ -377,7 +377,7 @@ app.get("/search-notes/", authenticateToken, async (req, res) => {
   }
 });
 
-//! Update profile + send OTP if email changes
+//! update-profile
 app.put("/update-profile", authenticateToken, async (req, res) => {
   const { fullname, email } = req.body;
   const { user } = req.user;
@@ -393,13 +393,16 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
     if (!existingUser)
       return res.status(404).json({ error: true, message: "User not found" });
 
+    let otpSent = false;
+
     if (fullname) existingUser.fullname = fullname;
 
     if (email && email !== existingUser.email) {
-      // Generate OTP
+      // save as pendingEmail and send OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      existingUser.pendingEmail = email;
       existingUser.emailOtp = otp;
-      existingUser.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      existingUser.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
       existingUser.emailVerified = false;
 
       try {
@@ -409,8 +412,8 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
           subject: "Verify your new email",
           text: `Your OTP code is: ${otp}`,
         });
-        console.log("Profile update OTP sent:", otp);
-        existingUser.email = email;
+        otpSent = true;
+        console.log("OTP sent to pending email:", otp);
       } catch (err) {
         console.error("Failed to send OTP:", err);
         return res.status(400).json({
@@ -421,7 +424,14 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
     }
 
     await existingUser.save();
-    return res.json({ error: false, message: "Profile updated successfully" });
+
+    return res.json({
+      error: false,
+      message: otpSent
+        ? "OTP sent to new email"
+        : "Profile updated successfully",
+      otpSent,
+    });
   } catch (err) {
     console.error("Update profile failed:", err);
     return res
@@ -430,7 +440,7 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
   }
 });
 
-//! Verify email OTP
+// verify-email-otp
 app.post("/verify-email-otp", authenticateToken, async (req, res) => {
   const { otp } = req.body;
   const { user } = req.user;
@@ -443,17 +453,15 @@ app.post("/verify-email-otp", authenticateToken, async (req, res) => {
     if (!existingUser)
       return res.status(404).json({ error: true, message: "User not found" });
 
-    if (
-      existingUser.emailOtp === otp &&
-      existingUser.otpExpires &&
-      existingUser.otpExpires > new Date()
-    ) {
+    if (existingUser.emailOtp === otp && existingUser.otpExpires > new Date()) {
+      existingUser.email = existingUser.pendingEmail;
+      existingUser.pendingEmail = undefined;
+      existingUser.emailOtp = undefined;
+      existingUser.otpExpires = undefined;
       existingUser.emailVerified = true;
-      existingUser.emailOtp = null;
-      existingUser.otpExpires = null;
-      await existingUser.save();
 
-      return res.json({ error: false, message: "Email verified successfully" });
+      await existingUser.save();
+      return res.json({ error: false, message: "Email verified and updated" });
     } else {
       return res
         .status(400)
