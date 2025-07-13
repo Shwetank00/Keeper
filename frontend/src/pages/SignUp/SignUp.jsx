@@ -4,31 +4,34 @@ import { PasswordInput } from "../../components/input/PasswordInput";
 import { Link, useNavigate } from "react-router-dom";
 import { validateEmail } from "../../utils/helper";
 import axiosInstance from "../../utils/axiosInstanse";
+import { EnterOTP } from "../../components/OTP/EnterOTP";
 
 export const SignUp = () => {
+  const [step, setStep] = useState("signup"); // "signup" or "verify"
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [accessToken, setAccessToken] = useState("");
-  const [step, setStep] = useState(1); // 1=signup, 2=verify otp
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Save token temporarily until verified
+  const [tempToken, setTempToken] = useState("");
+
   const handleSignUp = async (e) => {
     e.preventDefault();
+    setError("");
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
+    // validations
     if (!trimmedName) return setError("Please enter your name.");
     if (!trimmedEmail) return setError("Please enter your email.");
     if (!validateEmail(trimmedEmail))
       return setError("Please enter a valid email.");
     if (!password) return setError("Please enter the password.");
 
-    setError("");
     setLoading(true);
 
     try {
@@ -39,51 +42,39 @@ export const SignUp = () => {
       });
 
       if (response.data?.error) {
-        setError(response.data?.message || "An error occurred during signup.");
+        setError(response.data?.message || "Signup failed. Try again.");
         return;
       }
 
       if (response.data?.accessToken) {
-        setAccessToken(response.data.accessToken);
-        setStep(2); // move to OTP step
+        setTempToken(response.data.accessToken);
+        setStep("verify");
+      } else {
+        setError("Unexpected error: no access token received.");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "An error occurred while signing up. Please try again."
-      );
+      setError(err.response?.data?.message || "Signup failed. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-
-    if (!otp) return setError("Please enter the OTP.");
-
-    setError("");
+  const handleVerifyOtp = async (otp) => {
     setLoading(true);
-
+    setError("");
     try {
-      const response = await axiosInstance.post(
+      // use a separate axios call without adding Authorization header from localStorage
+      await axiosInstance.post(
         "/verify-email-otp",
         { otp },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${tempToken}` } }
       );
 
-      if (response.data?.error) {
-        setError(response.data?.message || "OTP verification failed.");
-        return;
-      }
-
-      // store token & redirect
-      localStorage.setItem("accessToken", accessToken);
+      // store verified token in localStorage and redirect
+      localStorage.setItem("accessToken", tempToken);
       navigate("/");
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to verify OTP. Please try again."
-      );
+      setError(err.response?.data?.message || "Failed to verify OTP.");
     } finally {
       setLoading(false);
     }
@@ -94,7 +85,7 @@ export const SignUp = () => {
       <Navbar />
       <div className="flex items-center justify-center mt-28">
         <div className="w-96 border rounded bg-white px-7 py-10">
-          {step === 1 && (
+          {step === "signup" ? (
             <form onSubmit={handleSignUp} noValidate>
               <h4 className="text-2xl mb-7">Sign Up</h4>
 
@@ -135,26 +126,18 @@ export const SignUp = () => {
                 </Link>
               </p>
             </form>
-          )}
-
-          {step === 2 && (
-            <form onSubmit={handleVerifyOtp} noValidate>
-              <h4 className="text-2xl mb-7">Verify Email</h4>
-
-              <input
-                type="text"
-                placeholder="Enter OTP"
-                className="input-box"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+          ) : (
+            <>
+              <h4 className="text-2xl mb-5">Verify your email</h4>
+              <p className="text-xs mb-4">
+                Enter the 6-digit code sent to <strong>{email}</strong>
+              </p>
+              <EnterOTP
+                onSubmit={handleVerifyOtp}
+                loading={loading}
+                error={error}
               />
-
-              {error && <p className="text-red-500 text-xs pb-1">{error}</p>}
-
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? "Verifying..." : "Verify OTP"}
-              </button>
-            </form>
+            </>
           )}
         </div>
       </div>

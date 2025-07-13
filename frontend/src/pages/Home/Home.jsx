@@ -10,50 +10,50 @@ import Toast from "../../components/ToastMessage/Toast";
 import EmptyCard from "../../components/EmptyCard/EmptyCard";
 
 export const Home = () => {
-  // State: modal open/close and mode (add/edit)
+  // State: modal for add/edit notes
   const [modalState, setModalState] = useState({
     isShown: false,
     type: "add",
     data: null,
   });
 
-  // State: toast notification
+  // State: toast message
   const [toast, setToast] = useState({
     isShown: false,
     message: "",
     type: "success",
   });
 
-  // State: user data and notes list
+  // State: user info & notes
   const [user, setUser] = useState(null);
   const [notes, setNotes] = useState([]);
 
-  // State: loading indicator
+  // Loading indicator
   const [loading, setLoading] = useState(true);
 
-  // State: search query text
+  // Search query
   const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
 
-  // Show toast message
+  // Show toast
   const showToast = (message, type = "success") => {
     setToast({ isShown: true, message, type });
   };
 
-  // Close toast message
+  // Hide toast
   const handleCloseToast = () => {
     setToast((prev) => ({ ...prev, isShown: false }));
   };
 
-  // Fetch user and notes on initial mount
+  // Fetch user + notes on mount
   useEffect(() => {
     const init = async () => {
       try {
         await fetchUser();
         await fetchNotes();
       } catch (err) {
-        console.error("Initialization failed:", err);
+        console.error("Init failed:", err);
       } finally {
         setLoading(false);
       }
@@ -61,7 +61,7 @@ export const Home = () => {
     init();
   }, []);
 
-  // Fetch logged-in user details
+  // Fetch logged-in user
   const fetchUser = async () => {
     try {
       const res = await axiosInstance.get("/get-user");
@@ -78,17 +78,20 @@ export const Home = () => {
     }
   };
 
-  // Fetch all notes for the user
+  // Fetch notes
   const fetchNotes = async () => {
     try {
       const res = await axiosInstance.get("/get-all-notes");
       setNotes(res.data?.notes || []);
     } catch (err) {
-      console.error("Failed to fetch notes:", err.response?.data || err);
+      console.error("Fetch notes failed:", err.response?.data || err);
     }
   };
 
-  // Add a new note
+  // Refetch user info — e.g. after profile OTP verified
+  const refetchUserInfo = fetchUser;
+
+  // Add new note
   const addNote = async (newNote) => {
     try {
       const res = await axiosInstance.post("/add-note", newNote);
@@ -98,12 +101,12 @@ export const Home = () => {
       }
       closeModal();
     } catch (err) {
-      console.error("Failed to add note:", err.response?.data || err);
+      console.error("Add note failed:", err.response?.data || err);
       showToast("Failed to add note", "delete");
     }
   };
 
-  // Edit an existing note
+  // Edit note
   const editNote = async (updatedNote) => {
     try {
       const res = await axiosInstance.put(
@@ -120,31 +123,31 @@ export const Home = () => {
       }
       closeModal();
     } catch (err) {
-      console.error("Failed to edit note:", err.response?.data || err);
+      console.error("Edit note failed:", err.response?.data || err);
       showToast("Failed to update note", "delete");
     }
   };
 
-  // Delete a note by ID
+  // Delete note
   const deleteNote = async (id) => {
     try {
       await axiosInstance.delete(`/delete-note/${id}`);
       setNotes((prev) => prev.filter((note) => note._id !== id));
-      showToast("Note deleted successfully", "delete");
+      showToast("Note deleted", "delete");
     } catch (err) {
-      console.error("Failed to delete note:", err.response?.data || err);
+      console.error("Delete note failed:", err.response?.data || err);
       showToast("Failed to delete note", "delete");
     }
   };
 
-  // Toggle pin/unpin for a note
+  // Toggle pin
   const togglePin = async (id) => {
     try {
-      const targetNote = notes.find((note) => note._id === id);
-      if (!targetNote) return;
+      const target = notes.find((note) => note._id === id);
+      if (!target) return;
 
       const res = await axiosInstance.put(`/update-note-pinned/${id}`, {
-        isPinned: !targetNote.isPinned,
+        isPinned: !target.isPinned,
       });
 
       if (res.data?.note) {
@@ -157,24 +160,24 @@ export const Home = () => {
         );
       }
     } catch (err) {
-      console.error("Failed to pin/unpin note:", err.response?.data || err);
+      console.error("Toggle pin failed:", err.response?.data || err);
       showToast("Failed to pin/unpin note", "delete");
     }
   };
 
-  // Close modal and reset modal state
+  // Close modal
   const closeModal = () => {
     setModalState({ isShown: false, type: "add", data: null });
   };
 
-  // Filter and sort notes based on search query & pinned status
+  // Filter + sort notes
   const filteredNotes = notes
     .filter((note) =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
 
-  // Custom styles for modal
+  // Modal styles
   const modalStyles = {
     overlay: { backgroundColor: "rgba(0,0,0,0.2)" },
     content: {
@@ -193,14 +196,14 @@ export const Home = () => {
         <p className="text-center mt-10 text-gray-500">Loading...</p>
       ) : user ? (
         <>
-          {/* Navbar at top */}
+          {/* Navbar, pass refetchUserInfo to refresh after profile update */}
           <Navbar
             userInfo={user}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            refetchUserInfo={refetchUserInfo}
           />
 
-          {/* List of notes or empty card */}
           <div className="container mx-auto">
             {filteredNotes.length === 0 ? (
               <EmptyCard
@@ -254,7 +257,7 @@ export const Home = () => {
             />
           </Modal>
 
-          {/* Toast message */}
+          {/* Toast */}
           <Toast
             isShown={toast.isShown}
             message={toast.message}
