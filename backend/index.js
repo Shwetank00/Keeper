@@ -36,13 +36,16 @@ const Note = require("./models/note.model");
 app.use(express.json());
 
 // ✅ Use CORS properly (allow your frontend URL in production)
+const allowedOrigins = [process.env.FRONTEND_URL];
+
+// CORS
 app.use(
   cors({
     origin: (origin, callback) => {
       if (
-        !origin || // allow non-browser requests (like Postman)
-        origin.endsWith(".vercel.app") ||
-        origin === "https://keeper-j3ofbzc2c-shwetank-jains-projects.vercel.app"
+        !origin || // allow Postman etc.
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
       ) {
         callback(null, true);
       } else {
