@@ -1,11 +1,12 @@
-// ProfileMenu.jsx
 import { useState } from "react";
 import PropTypes from "prop-types";
 import axiosInstance from "../../utils/axiosInstanse";
 import { EnterOTP } from "../OTP/EnterOTP";
 
 /**
- * ProfileMenu allows editing user profile and handles email OTP verification.
+ * ProfileMenu component
+ * - Lets user edit profile (name & email)
+ * - Handles OTP verification when email changes
  */
 export const ProfileMenu = ({
   userInfo,
@@ -17,10 +18,15 @@ export const ProfileMenu = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(userInfo.fullname || "");
   const [editedEmail, setEditedEmail] = useState(userInfo.email || "");
+
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpError, setOtpError] = useState("");
 
+  /**
+   * Save profile changes
+   * If email changes, sends OTP → show modal
+   */
   const handleSave = async () => {
     if (!editedName.trim() || !editedEmail.trim()) {
       onShowToast("Name and email are required!", "delete");
@@ -34,7 +40,7 @@ export const ProfileMenu = ({
       });
 
       if (data.otpSent) {
-        setShowOtpModal(true);
+        setShowOtpModal(true); // show modal to enter OTP
       } else {
         setIsEditing(false);
         onProfileUpdated({
@@ -46,15 +52,25 @@ export const ProfileMenu = ({
       }
     } catch (err) {
       console.error("Profile update failed:", err);
-      onShowToast("Failed to update profile", "delete");
+      onShowToast(
+        err.response?.data?.message || "Failed to update profile",
+        "delete"
+      );
     }
   };
 
+  /**
+   * Verify OTP after changing email
+   */
   const handleVerifyOtp = async (otp) => {
     setLoading(true);
     setOtpError("");
+
     try {
-      const { data } = await axiosInstance.post("/verify-email-otp", { otp });
+      const { data } = await axiosInstance.post("/verify-change-email-otp", {
+        otp,
+      });
+
       if (!data.error) {
         setShowOtpModal(false);
         setIsEditing(false);
@@ -62,15 +78,15 @@ export const ProfileMenu = ({
           fullname: editedName.trim(),
           email: editedEmail.trim(),
         });
-        onShowToast("Email verified successfully!", "success");
+        onShowToast("New email verified successfully!", "success");
         onClose();
       } else {
         setOtpError(data.message || "Invalid OTP");
         onShowToast("Invalid OTP", "delete");
       }
     } catch (err) {
-      console.error("Verify OTP failed:", err);
-      setOtpError("Failed to verify OTP. Try again.");
+      console.error("Verify change email OTP failed:", err);
+      setOtpError(err.response?.data?.message || "Failed to verify OTP");
       onShowToast("Failed to verify OTP", "delete");
     } finally {
       setLoading(false);
@@ -139,6 +155,7 @@ export const ProfileMenu = ({
         </>
       )}
 
+      {/* OTP modal for email verification */}
       {showOtpModal && (
         <EnterOTP
           onSubmit={handleVerifyOtp}
