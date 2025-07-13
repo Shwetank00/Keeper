@@ -442,21 +442,67 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/verify-email-otp", authenticateToken, async (req, res) => {
+//! Verify OTP after signup
+app.post("/verify-signup-otp", async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res
+      .status(400)
+      .json({ error: true, message: "Email and OTP are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: true, message: "User not found" });
+    }
+
+    if (
+      user.emailOtp === otp &&
+      user.otpExpires &&
+      user.otpExpires > new Date()
+    ) {
+      user.emailVerified = true;
+      user.emailOtp = undefined;
+      user.otpExpires = undefined;
+      await user.save();
+
+      return res.json({ error: false, message: "Email verified successfully" });
+    } else {
+      return res
+        .status(400)
+        .json({ error: true, message: "Invalid or expired OTP" });
+    }
+  } catch (err) {
+    console.error("Verify signup OTP failed:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//! Verify OTP after changing email
+app.post("/verify-change-email-otp", authenticateToken, async (req, res) => {
   const { otp } = req.body;
   const { user } = req.user;
 
-  if (!otp)
+  if (!otp) {
     return res.status(400).json({ error: true, message: "OTP is required" });
+  }
 
   try {
     const existingUser = await User.findById(user._id);
-    if (!existingUser)
+    if (!existingUser) {
       return res.status(404).json({ error: true, message: "User not found" });
+    }
 
-    console.log("Found user:", existingUser); // 🐞 log user to debug
-
-    if (existingUser.emailOtp === otp && existingUser.otpExpires > new Date()) {
+    if (
+      existingUser.emailOtp === otp &&
+      existingUser.otpExpires &&
+      existingUser.otpExpires > new Date() &&
+      existingUser.pendingEmail
+    ) {
       existingUser.email = existingUser.pendingEmail;
       existingUser.pendingEmail = undefined;
       existingUser.emailOtp = undefined;
@@ -464,14 +510,17 @@ app.post("/verify-email-otp", authenticateToken, async (req, res) => {
       existingUser.emailVerified = true;
 
       await existingUser.save();
-      return res.json({ error: false, message: "Email verified and updated" });
+      return res.json({
+        error: false,
+        message: "New email verified and updated",
+      });
     } else {
       return res
         .status(400)
         .json({ error: true, message: "Invalid or expired OTP" });
     }
   } catch (err) {
-    console.error("Verify OTP failed:", err); // 🐞 full stack trace
+    console.error("Verify change email OTP failed:", err);
     return res
       .status(500)
       .json({ error: true, message: "Internal server error" });

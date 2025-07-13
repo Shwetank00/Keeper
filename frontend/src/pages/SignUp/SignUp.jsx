@@ -7,17 +7,21 @@ import axiosInstance from "../../utils/axiosInstanse";
 import { EnterOTP } from "../../components/OTP/EnterOTP";
 
 export const SignUp = () => {
-  const [step, setStep] = useState("signup"); // "signup" or "verify"
+  // Step: 'signup' → fill form, 'verify' → enter OTP
+  const [step, setStep] = useState("signup");
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [tempToken, setTempToken] = useState(""); // store temporary JWT
+
   const navigate = useNavigate();
 
-  // Save token temporarily until verified
-  const [tempToken, setTempToken] = useState("");
-
+  // Handle form submit → create account + send OTP
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError("");
@@ -25,32 +29,31 @@ export const SignUp = () => {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
-    // validations
+    // Basic validations
     if (!trimmedName) return setError("Please enter your name.");
     if (!trimmedEmail) return setError("Please enter your email.");
-    if (!validateEmail(trimmedEmail))
-      return setError("Please enter a valid email.");
-    if (!password) return setError("Please enter the password.");
+    if (!validateEmail(trimmedEmail)) return setError("Enter a valid email.");
+    if (!password) return setError("Please enter a password.");
 
     setLoading(true);
 
     try {
-      const response = await axiosInstance.post("/create-account", {
+      const res = await axiosInstance.post("/create-account", {
         fullname: trimmedName,
         email: trimmedEmail,
         password,
       });
 
-      if (response.data?.error) {
-        setError(response.data?.message || "Signup failed. Try again.");
+      if (res.data?.error) {
+        setError(res.data.message || "Signup failed. Try again.");
         return;
       }
 
-      if (response.data?.accessToken) {
-        setTempToken(response.data.accessToken);
-        setStep("verify");
+      if (res.data?.accessToken) {
+        setTempToken(res.data.accessToken);
+        setStep("verify"); // go to OTP step
       } else {
-        setError("Unexpected error: no access token received.");
+        setError("Unexpected error: no token received.");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed. Try again.");
@@ -59,18 +62,19 @@ export const SignUp = () => {
     }
   };
 
+  // Handle OTP verification step
   const handleVerifyOtp = async (otp) => {
     setLoading(true);
     setError("");
+
     try {
-      // use a separate axios call without adding Authorization header from localStorage
       await axiosInstance.post(
-        "/verify-email-otp",
-        { otp },
+        "/verify-signup-otp", // ✅ use correct endpoint
+        { email, otp },
         { headers: { Authorization: `Bearer ${tempToken}` } }
       );
 
-      // store verified token in localStorage and redirect
+      // Save token (still valid) and redirect
       localStorage.setItem("accessToken", tempToken);
       navigate("/");
     } catch (err) {
@@ -132,6 +136,7 @@ export const SignUp = () => {
               <p className="text-xs mb-4">
                 Enter the 6-digit code sent to <strong>{email}</strong>
               </p>
+
               <EnterOTP
                 onSubmit={handleVerifyOtp}
                 loading={loading}
