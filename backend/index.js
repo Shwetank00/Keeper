@@ -36,16 +36,13 @@ const Note = require("./models/note.model");
 app.use(express.json());
 
 // ✅ Use CORS properly (allow your frontend URL in production)
-const allowedOrigins = [process.env.FRONTEND_URL];
-
-// CORS
 app.use(
   cors({
     origin: (origin, callback) => {
       if (
-        !origin || // allow Postman etc.
-        allowedOrigins.includes(origin) ||
-        origin.endsWith(".vercel.app")
+        !origin || // allow non-browser requests (like Postman)
+        origin.endsWith(".vercel.app") ||
+        origin === "http://localhost:5173"
       ) {
         callback(null, true);
       } else {
