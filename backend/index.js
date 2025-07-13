@@ -442,7 +442,6 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
   }
 });
 
-//! verify-email-otp
 app.post("/verify-email-otp", authenticateToken, async (req, res) => {
   const { otp } = req.body;
   const { user } = req.user;
@@ -454,6 +453,8 @@ app.post("/verify-email-otp", authenticateToken, async (req, res) => {
     const existingUser = await User.findById(user._id);
     if (!existingUser)
       return res.status(404).json({ error: true, message: "User not found" });
+
+    console.log("Found user:", existingUser); // 🐞 log user to debug
 
     if (existingUser.emailOtp === otp && existingUser.otpExpires > new Date()) {
       existingUser.email = existingUser.pendingEmail;
@@ -470,7 +471,7 @@ app.post("/verify-email-otp", authenticateToken, async (req, res) => {
         .json({ error: true, message: "Invalid or expired OTP" });
     }
   } catch (err) {
-    console.error("Verify OTP failed:", err);
+    console.error("Verify OTP failed:", err); // 🐞 full stack trace
     return res
       .status(500)
       .json({ error: true, message: "Internal server error" });
