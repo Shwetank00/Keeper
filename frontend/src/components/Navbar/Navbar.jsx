@@ -1,25 +1,32 @@
+// Navbar.jsx
 import PropTypes from "prop-types";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ProfileInfo } from "../Cards/ProfileInfo";
+import { ProfileInfo } from "../Profile/ProfileInfo";
 import { SearchBar } from "../SearchBar/SearchBar";
 
-export const Navbar = ({ userInfo, searchQuery, setSearchQuery }) => {
+/**
+ * Navbar component displayed on all pages except auth pages.
+ * Contains title, search bar, and profile info.
+ */
+export const Navbar = ({ userInfo, searchQuery, setSearchQuery, setUser }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if current page is login/signup
+  // Pages where Navbar should be hidden
   const authPages = ["/login", "/signup"];
   const isAuthPage = authPages.includes(location.pathname.toLowerCase());
 
-  // Handle logout
+  // Clear local storage and navigate to login
   const onLogout = () => {
     localStorage.clear();
     navigate("/login");
   };
 
-  // Clear search query
-  const onClearSearch = () => {
-    setSearchQuery("");
+  const onClearSearch = () => setSearchQuery("");
+
+  const handleSearch = () => {
+    console.log("Searching for:", searchQuery);
+    // Could call an API or filter locally here
   };
 
   return (
@@ -30,21 +37,27 @@ export const Navbar = ({ userInfo, searchQuery, setSearchQuery }) => {
         <>
           <SearchBar
             value={searchQuery}
-            onChange={({ target }) => setSearchQuery(target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             onClearSearch={onClearSearch}
+            handleSearch={handleSearch}
           />
-          <ProfileInfo userInfo={userInfo} onLogout={onLogout} />
+          <ProfileInfo
+            userInfo={userInfo}
+            setUser={setUser}
+            onLogout={onLogout}
+          />
         </>
       )}
     </div>
   );
 };
 
-// ✅ PropTypes validation
 Navbar.propTypes = {
   userInfo: PropTypes.shape({
     fullname: PropTypes.string.isRequired,
+    email: PropTypes.string,
   }).isRequired,
   searchQuery: PropTypes.string.isRequired,
   setSearchQuery: PropTypes.func.isRequired,
+  setUser: PropTypes.func.isRequired,
 };

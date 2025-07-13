@@ -395,20 +395,22 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
 
     let otpSent = false;
 
-    if (fullname) existingUser.fullname = fullname;
+    if (fullname) {
+      existingUser.fullname = fullname.trim();
+    }
 
-    if (email && email !== existingUser.email) {
-      // save as pendingEmail and send OTP
+    if (email && email.trim() !== existingUser.email) {
+      // new email is different → start verification process
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      existingUser.pendingEmail = email;
+      existingUser.pendingEmail = email.trim();
       existingUser.emailOtp = otp;
       existingUser.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-      existingUser.emailVerified = false;
+      existingUser.emailVerified = false; // set false only now
 
       try {
         await transporter.sendMail({
           from: process.env.SMTP_USER,
-          to: email,
+          to: email.trim(),
           subject: "Verify your new email",
           text: `Your OTP code is: ${otp}`,
         });
@@ -440,7 +442,7 @@ app.put("/update-profile", authenticateToken, async (req, res) => {
   }
 });
 
-// verify-email-otp
+//! verify-email-otp
 app.post("/verify-email-otp", authenticateToken, async (req, res) => {
   const { otp } = req.body;
   const { user } = req.user;

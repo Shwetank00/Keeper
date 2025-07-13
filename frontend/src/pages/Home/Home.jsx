@@ -10,6 +10,10 @@ import Toast from "../../components/ToastMessage/Toast";
 import EmptyCard from "../../components/EmptyCard/EmptyCard";
 
 export const Home = () => {
+  // State: user info & notes
+  const [user, setUser] = useState(null);
+  const [notes, setNotes] = useState([]);
+
   // State: modal for add/edit notes
   const [modalState, setModalState] = useState({
     isShown: false,
@@ -23,10 +27,6 @@ export const Home = () => {
     message: "",
     type: "success",
   });
-
-  // State: user info & notes
-  const [user, setUser] = useState(null);
-  const [notes, setNotes] = useState([]);
 
   // Loading indicator
   const [loading, setLoading] = useState(true);
@@ -196,9 +196,9 @@ export const Home = () => {
         <p className="text-center mt-10 text-gray-500">Loading...</p>
       ) : user ? (
         <>
-          {/* Navbar, pass refetchUserInfo to refresh after profile update */}
           <Navbar
             userInfo={user}
+            setUser={setUser}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             refetchUserInfo={refetchUserInfo}
