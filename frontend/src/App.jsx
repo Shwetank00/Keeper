@@ -2,10 +2,10 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Home } from "./pages/Home/Home";
 import { Login } from "./pages/Login/Login";
 import { SignUp } from "./pages/SignUp/SignUp";
-import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
-import EnterOTP from "./components/OTP/EnterOTP";
-import ResetPassword from "./pages/ResetPassword/ResetPassword";
-import RootRedirector from "./components/RootRedirector";
+import {ForgotPassword} from "./pages/ForgotPassword/ForgotPassword";
+import { EnterOTP } from "./components/OTP/EnterOTP";
+import {ResetPassword} from "./pages/ResetPassword/ResetPassword";
+import {RootRedirector} from "./components/RootRedirector/RootRedirector";
 
 export const App = () => {
   return (

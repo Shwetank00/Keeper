@@ -4,7 +4,7 @@ import axiosInstance from "../../utils/axiosInstanse";
 import { PasswordInput } from "../../components/input/PasswordInput";
 import Toast from "../../components/ToastMessage/Toast"; // Assuming you want Navbar here
 
-const ResetPassword = () => {
+export const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [email, setEmail] = useState(""); // Still need email to identify user for password reset
@@ -136,5 +136,3 @@ const ResetPassword = () => {
     </>
   );
 };
-
-export default ResetPassword;

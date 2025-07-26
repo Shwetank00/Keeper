@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const RootRedirector = () => {
+export const RootRedirector = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,5 +20,3 @@ const RootRedirector = () => {
   // You can render a loading spinner or null while the redirect happens
   return null;
 };
-
-export default RootRedirector;
