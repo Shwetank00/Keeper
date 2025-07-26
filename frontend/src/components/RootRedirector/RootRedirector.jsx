@@ -6,7 +6,7 @@ export const RootRedirector = () => {
 
   useEffect(() => {
     // Check if a token exists in localStorage
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
 
     if (token) {
       // If a token exists, redirect to the home page
