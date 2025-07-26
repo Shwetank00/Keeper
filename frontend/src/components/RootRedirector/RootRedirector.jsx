@@ -5,18 +5,21 @@ export const RootRedirector = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if a token exists in localStorage
+    console.log("RootRedirector: Component mounted/updated."); // Debugging line
     const token = localStorage.getItem("accessToken");
+    console.log(
+      "RootRedirector: Value read from localStorage for 'accessToken':",
+      token
+    ); // Crucial debugging line
 
     if (token) {
-      // If a token exists, redirect to the home page
+      console.log("RootRedirector: Token found, navigating to /home."); // Debugging line
       navigate("/home", { replace: true });
     } else {
-      // If no token, redirect to the login page
+      console.log("RootRedirector: No token found, navigating to /login."); // Debugging line
       navigate("/login", { replace: true });
     }
-  }, [navigate]); // Re-run effect if navigate function changes (unlikely, but good practice)
+  }, [navigate]);
 
-  // You can render a loading spinner or null while the redirect happens
   return null;
 };
