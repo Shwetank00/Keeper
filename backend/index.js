@@ -601,6 +601,87 @@ app.post("/forgot-password", async (req, res) => {
   }
 });
 
+//! Verify OTP for Forgot Password
+app.post("/verify-forgot-password-otp", async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res
+      .status(400)
+      .json({ error: true, message: "Email and OTP are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: true, message: "User not found" });
+    }
+
+    if (
+      user.emailOtp === otp &&
+      user.otpExpires &&
+      user.otpExpires > new Date()
+    ) {
+      // OTP is valid. We can clear the OTP fields now if we want,
+      // or keep them until password reset for an extra layer of security.
+      // For simplicity and immediate usability for password reset,
+      // we'll clear them here.
+      user.emailOtp = undefined;
+      user.otpExpires = undefined;
+      await user.save(); // Save changes after clearing OTP
+
+      return res.json({
+        error: false,
+        message: "OTP verified successfully. You can now reset your password.",
+      });
+    } else {
+      return res
+        .status(400)
+        .json({ error: true, message: "Invalid or expired OTP" });
+    }
+  } catch (err) {
+    console.error("Verify forgot password OTP failed:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
+//! Modify the existing /reset-password endpoint
+app.post("/reset-password", async (req, res) => {
+  // It no longer needs OTP in the request body because OTP is verified in the previous step
+  const { email, newPassword } = req.body;
+
+  if (!email || !newPassword) {
+    return res
+      .status(400)
+      .json({ error: true, message: "Email and New Password are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: true, message: "User not found" });
+    }
+
+    // At this point, OTP is assumed to be already verified by the /verify-forgot-password-otp endpoint.
+    // We simply update the password.
+    user.password = newPassword;
+    await user.save();
+
+    return res.json({
+      error: false,
+      message: "Password reset successfully",
+    });
+  } catch (err) {
+    console.error("Reset password failed:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Internal server error" });
+  }
+});
+
 app.listen(8000, () => console.log("Server running on port 8000"));
 
 module.exports = app;
