@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstanse";
 import Toast from "../../components/ToastMessage/Toast"; // Assuming Navbar might be needed here
+import Navbar from "../../components/Navbar/Navbar"; // Assuming Navbar might be needed here
 
 // Import the now generic EnterOTP component
 import { EnterOTP } from "../../components/OTP/EnterOTP";
@@ -84,6 +85,7 @@ export const EnterOTPForgotPassword = () => {
 
   return (
     <>
+      <Navbar />
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="w-96 border rounded bg-white px-7 py-10 shadow-md">
           <h4 className="text-2xl text-center mb-7">
