@@ -5,7 +5,7 @@ import axiosInstance from "../../utils/axiosInstanse"; // Corrected typo here
 import Toast from "../../components/ToastMessage/Toast";
 import { validateEmail } from "../../utils/helper"; // Assuming you have email validation here
 
-const ForgotPassword = () => {
+export const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState(null);
   const [showToast, setShowToast] = useState(false);
@@ -114,5 +114,3 @@ const ForgotPassword = () => {
     </>
   );
 };
-
-export default ForgotPassword;
