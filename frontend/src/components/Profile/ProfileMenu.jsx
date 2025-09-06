@@ -1,6 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import axiosInstance from "../../utils/axiosInstanse";
+import axiosInstance from "../../utils/axiosInstance";
 import { EnterOTP } from "../OTP/EnterOTP";
 
 /**

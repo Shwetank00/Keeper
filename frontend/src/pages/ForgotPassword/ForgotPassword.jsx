@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstanse"; // Corrected typo here
+import axiosInstance from "../../utils/axiosInstance"; // Corrected typo here
 import Toast from "../../components/ToastMessage/Toast";
 import { validateEmail } from "../../utils/helper"; // Assuming you have email validation here
 

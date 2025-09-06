@@ -3,7 +3,7 @@ import { Navbar } from "../../components/Navbar/Navbar";
 import { PasswordInput } from "../../components/input/PasswordInput";
 import { Link, useNavigate } from "react-router-dom";
 import { validateEmail } from "../../utils/helper";
-import axiosInstance from "../../utils/axiosInstanse";
+import axiosInstance from "../../utils/axiosInstance";
 import { EnterOTP } from "../../components/OTP/EnterOTP";
 
 export const SignUp = () => {

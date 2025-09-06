@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstanse";
+import axiosInstance from "../../utils/axiosInstance";
 import { PasswordInput } from "../../components/input/PasswordInput";
 import Toast from "../../components/ToastMessage/Toast"; // Assuming you want Navbar here
 

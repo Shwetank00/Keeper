@@ -76,3 +76,5 @@ Navbar.propTypes = {
   setUser: PropTypes.func, // Removed .isRequired
   // If refetchUserInfo is a prop used by Navbar (e.g. from Home), it should also be optional here
 };
+
+export default Navbar;
